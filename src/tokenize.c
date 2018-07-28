@@ -99,7 +99,7 @@ char* dcc_token_tag_str(token_tag tag) {
     "TOKEN_KEYWORD_VOID",
   };
 
-  if (tag >= TOKEN_MAX) {
+  if (tag >= sizeof(STRINGS_OF_TOKENS) / sizeof(char*) ) {
     dcc_ice("invalid tag");
   }
   return STRINGS_OF_TOKENS[tag];
