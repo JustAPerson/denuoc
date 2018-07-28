@@ -20,40 +20,32 @@
   SOFTWARE.
 */
 
-#include <stdio.h>
+/*
+  Tokenizing. Turn input string into an array of tokens, which consist of
+  pointers enclosing the text represented by the token and a tag.
+  See Annex A of stdspec.
+*/
+
+#pragma once
+
 #include <stdlib.h>
-#include <string.h>
+#include "vec.h"
 
-#include "dcc.h"
-#include "tokenize.h"
+typedef enum {
+  TOKEN_UNKNOWN,
+  TOKEN_EOF,
+  TOKEN_IDENT,
+  TOKEN_STRING,
+  TOKEN_KEYWORD_VOID,
+  TOKEN_MAX,
+} token_tag;
 
-static char* read_stdin() {
-  char *output = 0;
-  char buffer[512];
-  size_t len = 0;
+typedef struct {
+  const char *begin, *end;
+  token_tag tag;
+} token;
+DECLARE_VEC(token, token)
 
-  while (!feof(stdin)) {
-    size_t quantity = fread(buffer, 1, sizeof buffer, stdin);
-
-    // TODO smarter growth strategy
-    // +1 for null terminator
-    void *new_buffer = realloc(output, len + quantity + 1);
-    if (!new_buffer) {
-      dcc_ice("cannot malloc");
-    }
-    output = new_buffer;
-    memcpy(output + len, buffer, quantity);
-    len += quantity;
-  }
-
-  output[len] = 0;
-  return output;
-}
-
-int main(int argc, char *argv[]) {
-  char *input = read_stdin();
-  token_vec tokens = dcc_tokenize(input);
-  dcc_print_tokens(&tokens);
-
-  return 0;
-}
+token_vec dcc_tokenize(const char *input);
+void dcc_print_tokens(const token_vec *tokens);
+char* dcc_token_tag_str(token_tag tag);

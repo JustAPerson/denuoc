@@ -1,9 +1,13 @@
-CC ?= gcc
+CC ?= clang
+CFLAGS += --std=c11 -g
 
-all: denuoc
+all: dcc
 
 SRCS = $(wildcard src/*.c)
 OBJS = $(patsubst %.c,%.o,$(SRCS))
 
-denuoc: $(OBJS)
-	$(CC) -o $@ $<
+dcc: $(OBJS)
+	$(CC) -o $@ $^
+
+clean:
+	rm $(OBJS)

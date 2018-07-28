@@ -20,40 +20,16 @@
   SOFTWARE.
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <stdarg.h>
 
 #include "dcc.h"
-#include "tokenize.h"
 
-static char* read_stdin() {
-  char *output = 0;
-  char buffer[512];
-  size_t len = 0;
+void dcc_ice(const char* format, ...) {
+  va_list vlist;
 
-  while (!feof(stdin)) {
-    size_t quantity = fread(buffer, 1, sizeof buffer, stdin);
-
-    // TODO smarter growth strategy
-    // +1 for null terminator
-    void *new_buffer = realloc(output, len + quantity + 1);
-    if (!new_buffer) {
-      dcc_ice("cannot malloc");
-    }
-    output = new_buffer;
-    memcpy(output + len, buffer, quantity);
-    len += quantity;
-  }
-
-  output[len] = 0;
-  return output;
-}
-
-int main(int argc, char *argv[]) {
-  char *input = read_stdin();
-  token_vec tokens = dcc_tokenize(input);
-  dcc_print_tokens(&tokens);
-
-  return 0;
+  fprintf(stderr, "dcc internal compiler error: ");
+  va_start(vlist, format);
+  vfprintf(stderr, format, vlist);
+  va_end(vlist);
+  exit(1);
 }
