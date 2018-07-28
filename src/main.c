@@ -40,11 +40,7 @@ static char* read_stdin() {
 
     // TODO smarter growth strategy
     // +1 for null terminator
-    void *new_buffer = realloc(output, len + quantity + 1);
-    if (!new_buffer) {
-      dcc_ice("cannot malloc");
-    }
-    output = new_buffer;
+    output = dcc_realloc(output, len + quantity + 1);
     memcpy(output + len, buffer, quantity);
     len += quantity;
   }

@@ -25,6 +25,30 @@
 
 #include "dcc.h"
 
+void* dcc_malloc(size_t size) {
+  void *result = malloc(size);
+  if (!result) {
+    dcc_ice("out of memory");
+  }
+  return result;
+}
+
+void* dcc_calloc(size_t size, size_t num) {
+  void *result = calloc(size, num);
+  if (!result) {
+    dcc_ice("out of memory");
+  }
+  return result;
+}
+
+void* dcc_realloc(void* buffer, size_t size) {
+  void *result = realloc(buffer, size);
+  if (!result) {
+    dcc_ice("out of memory");
+  }
+  return result;
+}
+
 void dcc_ice(const char* format, ...) {
   va_list vlist;
 

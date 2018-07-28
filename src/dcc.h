@@ -26,6 +26,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+void* dcc_malloc(size_t size);
+void* dcc_calloc(size_t size, size_t num);
+void* dcc_realloc(void* buffer, size_t size);
+
 void dcc_ice(const char* format, ...);
 
 typedef enum  {

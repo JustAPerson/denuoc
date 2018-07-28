@@ -39,20 +39,18 @@
     return v;                          \
   }
 
-#define DEFINE_VEC_PUSH(name, type)                                            \
-  void name##_vec_push(struct name##_vec *vec, type elem) {                    \
-    if (vec->size >=  vec->capacity) {                                         \
-      if (vec->capacity == 0) {                                                \
-        vec->capacity = 4;                                                     \
-        vec->data = malloc(sizeof(type) * 4);                                  \
-      } else {                                                                 \
-        vec->capacity *= 2;                                                    \
-        if (!(vec->data = realloc(vec->data, sizeof(type) * vec->capacity))) { \
-          exit(1); /* TODO FIXME ERROR */                                      \
-        }                                                                      \
-      }                                                                        \
-    }                                                                          \
-    vec->data[vec->size++] = elem;                                             \
+#define DEFINE_VEC_PUSH(name, type)                                        \
+  void name##_vec_push(struct name##_vec *vec, type elem) {                \
+    if (vec->size >=  vec->capacity) {                                     \
+      if (vec->capacity == 0) {                                            \
+        vec->capacity = 4;                                                 \
+        vec->data = dcc_malloc(sizeof(type) * 4);                          \
+      } else {                                                             \
+        vec->capacity *= 2;                                                \
+        vec->data = dcc_realloc(vec->data, sizeof(type) * vec->capacity);  \
+      }                                                                    \
+    }                                                                      \
+    vec->data[vec->size++] = elem;                                         \
   }
 
 #define DEFINE_VEC_FREE(name, type)              \
