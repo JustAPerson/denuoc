@@ -36,7 +36,7 @@ static bool starts_ident(char c) {
 }
 
 static const char* word_end(const char *input) {
-  for (char c = *input; c && !isspace(c); input++, c = *input) {}
+  for (char c = *input; c && (isalnum(c) || c == '_'); input++, c = *input) {}
   return input;
 }
 
@@ -50,7 +50,7 @@ static token_tag match_keyword(const char *input, int len) {
   };
 
   for (int i = 0; KEYWORDS[i].value; i++) {
-    if (strcmp(input, KEYWORDS[i].value) == 0) {
+    if (strncmp(input, KEYWORDS[i].value,len) == 0) {
       return KEYWORDS[i].tag;
     }
   }
@@ -65,9 +65,9 @@ token_vec dcc_tokenize(const char *input) {
     if (isspace(c)) {
       input++;
     } else  if (starts_ident(c)) {
-      const char *begin = input, *end = word_end(input);
+      const char *begin = input, *end = word_end(input + 1);
       input = end;
-      token_tag tag = match_keyword(input, end - input);
+      token_tag tag = match_keyword(begin, end - begin);
 
       if (tag == TOKEN_UNKNOWN) {
         tag = TOKEN_IDENT;
