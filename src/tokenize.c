@@ -97,13 +97,10 @@ char* dcc_token_tag_str(token_tag tag) {
     "TOKEN_IDENT",
     "TOKEN_STRING",
     "TOKEN_KEYWORD_VOID",
-    "TOKEN_MAX",
   };
 
-  if (tag <= TOKEN_MAX) {
-    return STRINGS_OF_TOKENS[tag];
-  } else {
-    exit(1); // TODO FIXME
+  if (tag >= TOKEN_MAX) {
+    dcc_ice("invalid tag");
   }
-
+  return STRINGS_OF_TOKENS[tag];
 }
