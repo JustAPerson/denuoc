@@ -21,15 +21,50 @@
 */
 
 #include <stdarg.h>
+#include <time.h>
 
 #include "dcc.h"
 
 void dcc_ice(const char* format, ...) {
   va_list vlist;
 
-  fprintf(stderr, "dcc internal compiler error: ");
+  dcc_log(LOG_FATAL, "internal compiler error: ");
   va_start(vlist, format);
   vfprintf(stderr, format, vlist);
   va_end(vlist);
   exit(1);
+}
+
+extern log_level active_log_level;
+
+void dcc_log(log_level level, const char* format, ...) {
+  if (level >= LOG_COUNT) {
+    dcc_ice("invalid log level: %d\n", level);
+  }
+  if (level < active_log_level) {
+    return;
+  }
+
+  static char *LOG_STRINGS[] = {
+    "trace",
+    "debug",
+    "error",
+    "fatal",
+  };
+
+
+  struct timespec now;
+  if (clock_gettime(CLOCK_REALTIME, &now) != CLOCK_REALTIME) {
+    time(&now.tv_sec);
+    now.tv_nsec = 999999999;
+  }
+  struct tm *nower = gmtime(&now.tv_sec);
+  static char buffer[16];
+  strftime(buffer, 16, "%H:%M:%S", nower);
+
+  va_list vlist;
+  fprintf(stderr, "%s.%6.6lu %s: ", buffer, now.tv_nsec / 1000, LOG_STRINGS[level]);
+  va_start(vlist, format);
+  vfprintf(stderr, format, vlist);
+  va_end(vlist);
 }

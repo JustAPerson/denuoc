@@ -27,6 +27,9 @@
 #include "dcc.h"
 #include "tokenize.h"
 
+
+log_level active_log_level = LOG_DEBUG;
+
 static char* read_stdin() {
   char *output = 0;
   char buffer[512];
@@ -53,7 +56,7 @@ static char* read_stdin() {
 int main(int argc, char *argv[]) {
   char *input = read_stdin();
   token_vec tokens = dcc_tokenize(input);
-  dcc_print_tokens(&tokens);
+  dcc_log_tokens(&tokens);
 
   return 0;
 }

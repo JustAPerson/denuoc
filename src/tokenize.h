@@ -47,5 +47,5 @@ typedef struct {
 DECLARE_VEC(token, token)
 
 token_vec dcc_tokenize(const char *input);
-void dcc_print_tokens(const token_vec *tokens);
+void dcc_log_tokens(const token_vec *tokens);
 char* dcc_token_tag_str(token_tag tag);

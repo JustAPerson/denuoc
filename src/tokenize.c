@@ -83,10 +83,10 @@ token_vec dcc_tokenize(const char *input) {
   return tokens;
 }
 
-void dcc_print_tokens(const token_vec *tokens) {
+void dcc_log_tokens(const token_vec *tokens) {
   for (int i = 0; i < tokens->size; i++) {
     token token = tokens->data[i];
-    printf("%s %.*s\n", dcc_token_tag_str(token.tag), (int)(token.end - token.begin), token.begin);
+    dcc_log(LOG_TRACE, "%s %.*s\n", dcc_token_tag_str(token.tag), (int)(token.end - token.begin), token.begin);
   }
 }
 

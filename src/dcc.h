@@ -27,3 +27,14 @@
 #include <stdio.h>
 
 void dcc_ice(const char* format, ...);
+
+typedef enum  {
+  LOG_TRACE,
+  LOG_DEBUG,
+  LOG_ERROR,
+  LOG_FATAL,
+
+  LOG_COUNT,
+} log_level;
+void dcc_log(log_level level, const char* format, ...);
+
