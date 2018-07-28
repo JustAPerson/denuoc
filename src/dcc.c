@@ -28,7 +28,7 @@
 void* dcc_malloc(size_t size) {
   void *result = malloc(size);
   if (!result) {
-    dcc_ice("out of memory");
+    dcc_ice("out of memory\n");
   }
   return result;
 }
@@ -36,7 +36,7 @@ void* dcc_malloc(size_t size) {
 void* dcc_calloc(size_t size, size_t num) {
   void *result = calloc(size, num);
   if (!result) {
-    dcc_ice("out of memory");
+    dcc_ice("out of memory\n");
   }
   return result;
 }
@@ -44,7 +44,7 @@ void* dcc_calloc(size_t size, size_t num) {
 void* dcc_realloc(void* buffer, size_t size) {
   void *result = realloc(buffer, size);
   if (!result) {
-    dcc_ice("out of memory");
+    dcc_ice("out of memory\n");
   }
   return result;
 }
@@ -57,6 +57,14 @@ void dcc_ice(const char* format, ...) {
   vfprintf(stderr, format, vlist);
   va_end(vlist);
   exit(1);
+}
+
+void dcc_nyi(const char* feature) {
+  if (feature) {
+    dcc_ice("not yet implemented: %s\n", feature);
+  } else {
+    dcc_ice("not yet implemented");
+  }
 }
 
 extern log_level active_log_level;

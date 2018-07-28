@@ -31,6 +31,7 @@ void* dcc_calloc(size_t size, size_t num);
 void* dcc_realloc(void* buffer, size_t size);
 
 void dcc_ice(const char* format, ...);
+void dcc_nyi(const char* feature);
 
 typedef enum  {
   LOG_TRACE,
