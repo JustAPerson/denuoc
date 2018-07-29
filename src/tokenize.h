@@ -36,16 +36,25 @@ typedef enum {
   TOKEN_EOF,
   TOKEN_IDENT,
   TOKEN_STRING,
+  TOKEN_INTEGER,
+  TOKEN_REAL,
   TOKEN_KEYWORD_VOID,
   TOKEN_MAX,
-} token_tag;
+} token_tag_t;
+
+typedef union {
+  uint64_t integer;
+  double real;
+  char *string;
+} token_val_t;
 
 typedef struct {
   const char *begin, *end;
-  token_tag tag;
+  token_tag_t tag;
+  token_val_t val;
 } token;
 DECLARE_VEC(token, token)
 
 token_vec dcc_tokenize(const char *input);
 void dcc_log_tokens(const token_vec *tokens);
-char* dcc_token_tag_str(token_tag tag);
+char* dcc_token_tag_str(token_tag_t tag);

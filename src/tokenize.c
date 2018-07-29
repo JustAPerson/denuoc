@@ -40,10 +40,15 @@ static const char* word_end(const char *input) {
   return input;
 }
 
-static token_tag match_keyword(const char *input, int len) {
+static const char* malformed_token_end(const char* input ) {
+  for (char c = *input; c && !isspace(c); input++, c = *input) {}
+  return input;
+}
+
+static token_tag_t match_keyword(const char *input, int len) {
   static struct {
     char *value;
-    token_tag tag;
+    token_tag_t tag;
   } KEYWORDS[] = {
     {"void", TOKEN_KEYWORD_VOID},
     {0, 0}
@@ -58,6 +63,23 @@ static token_tag match_keyword(const char *input, int len) {
   return TOKEN_UNKNOWN;
 }
 
+static bool issymb(char c) {
+  static char C_SYMBOLS[] = {
+    '!', '%', '&', '(', ')',
+    '*', '+', ',', '-', '.',
+    '/', ':', ';', '<', '=',
+    '>', '?', '[', ']', '^',
+    '{', '|', '}', '~',  0,
+  };
+
+  for (int i = 0; C_SYMBOLS[i]; i++) {
+    if (C_SYMBOLS[i] == c) {
+      return true;
+    }
+  }
+  return false;
+}
+
 token_vec dcc_tokenize(const char *input) {
   token_vec tokens = token_vec_new();
 
@@ -67,14 +89,66 @@ token_vec dcc_tokenize(const char *input) {
     } else  if (starts_ident(c)) {
       const char *begin = input, *end = word_end(input + 1);
       input = end;
-      token_tag tag = match_keyword(begin, end - begin);
+
+      token_tag_t tag = match_keyword(begin, end - begin);
+      token_val_t val = { 0 };
 
       if (tag == TOKEN_UNKNOWN) {
         tag = TOKEN_IDENT;
+        val.string = dcc_malloc(end - begin + 1);
+        strncpy(val.string, begin, end-begin);
+        val.string[end-begin] = 0;
       }
 
-      token token = { begin, end, tag };
+      token token = { begin, end, tag, val };
       token_vec_push(&tokens, token);
+    } else if (issymb(c)) {
+      //  3 three len symbols
+      // 19 two len symbols
+      // 23 one len symbols
+      /* static char *C_SYMBOLS3[] = {"<<=", ">>=", "...", }; */
+      /* static char *C_SYMBOLS2[] = {"->", "++", "--", "<<", ">>", */
+      /*                              ">=", "<=", "==", "!=", "&&", */
+      /*                              "||", "*=", "/=", "%=", "+=", */
+      /*                              "-=", "&=", "^=", "|=", }; */
+      /* static char  C_SYMBOLS1[] = {'[', ']', '(', ')', '{', */
+      /*                              '}', '.', '&', '*', '+', */
+      /*                              '-', '~', '!', '/', '%', */
+      /*                              '<', '>', '^', '|', '?', */
+      /*                              ':', ';', '=', }; */
+      dcc_nyi("symbol lexing");
+    } else if (isdigit(c)) {
+      uint64_t integer;
+      double floating;
+
+      char *end;
+      if (sscanf(input, "%lf", &floating)) {
+        double confirm = strtod(input, &end);
+        dcc_assert(floating == confirm);
+
+        // float may actually be decimal integer
+        char *end2;
+        token_tag_t tag = TOKEN_REAL;
+        token_val_t val = { 0 };
+        if (sscanf(input, "%llu", &integer) && (strtoul(input, &end2, 10), end2 == end)) {
+          tag = TOKEN_INTEGER;
+          val.integer = integer;
+        } else {
+          val.real = floating;
+        }
+
+        token token = {input, end, tag, val };
+        token_vec_push(&tokens, token);
+      } else if (sscanf(input, "%lli", &integer)) {
+        uint64_t confirm = strtoull(input, &end, 0);
+        dcc_assert(integer == confirm);
+
+        token token = {input, end, TOKEN_INTEGER, { .integer = integer } };
+        token_vec_push(&tokens, token);
+      } else {
+        dcc_ice("malformed number %.*s\n", malformed_token_end(input + 1) - input, input);
+      }
+      input = end;
     } else {
       dcc_ice("untokenizable character `%c`\n", c);
     }
@@ -86,16 +160,30 @@ token_vec dcc_tokenize(const char *input) {
 void dcc_log_tokens(const token_vec *tokens) {
   for (int i = 0; i < tokens->size; i++) {
     token token = tokens->data[i];
-    dcc_log(LOG_TRACE, "%s %.*s\n", dcc_token_tag_str(token.tag), (int)(token.end - token.begin), token.begin);
+    char buffer[32];
+    char *extra = "<null>";
+
+    if (token.tag == TOKEN_IDENT || token.tag == TOKEN_STRING) {
+      extra = token.val.string;
+    } else if (token.tag == TOKEN_INTEGER) {
+      snprintf(buffer, sizeof buffer, "%llu", token.val.integer);
+      extra = buffer;
+    } else if (token.tag == TOKEN_REAL) {
+      snprintf(buffer, sizeof buffer, "%f", token.val.real);
+      extra = buffer;
+    }
+    dcc_log(LOG_TRACE, "%s \"%.*s\" extra=%s\n", dcc_token_tag_str(token.tag), (int)(token.end - token.begin), token.begin, extra);
   }
 }
 
-char* dcc_token_tag_str(token_tag tag) {
+char* dcc_token_tag_str(token_tag_t tag) {
   static char *STRINGS_OF_TOKENS[] = {
     "TOKEN_UNKNOWN",
     "TOKEN_EOF",
     "TOKEN_IDENT",
     "TOKEN_STRING",
+    "TOKEN_INTEGER",
+    "TOKEN_REAL",
     "TOKEN_KEYWORD_VOID",
   };
 
