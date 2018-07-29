@@ -27,9 +27,12 @@
 #include "dcc.h"
 #include "tokenize.h"
 
-DEFINE_VEC_NEW(token, token)
-DEFINE_VEC_PUSH(token, token_t)
-DEFINE_VEC_FREE(token, token_t)
+static void free_token(token_t *token) {
+  if (token->tag == TOKEN_IDENT) {
+    free(token->val.string);
+  }
+}
+DEFINE_VEC3(token_t, token, free_token);
 
 static bool starts_ident(char c) {
   return isalpha(c) || c == '_';

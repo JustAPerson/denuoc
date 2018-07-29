@@ -22,23 +22,23 @@
 
 #pragma once
 
-#define DECLARE_VEC(name, type)                              \
-  typedef struct {                                           \
-    type *data;                                              \
-    size_t size, capacity;                                   \
-  } name##_vec_t;                                            \
-  name##_vec_t name##_vec_new();                             \
+#define DECLARE_VEC(type, name)                       \
+  typedef struct {                                    \
+    type *data;                                       \
+    size_t size, capacity;                            \
+  } name##_vec_t;                                     \
+  name##_vec_t name##_vec_new();                      \
   void name##_vec_push(name##_vec_t *vec, type elem); \
   void name##_vec_free(name##_vec_t *vec);
 
 
-#define DEFINE_VEC_NEW(name, type) \
+#define DEFINE_VEC_NEW(type, name) \
   name##_vec_t name##_vec_new() {  \
     name##_vec_t v = { 0, 0, 0 };  \
     return v;                      \
   }
 
-#define DEFINE_VEC_PUSH(name, type)                                       \
+#define DEFINE_VEC_PUSH(type, name)                                       \
   void name##_vec_push(name##_vec_t *vec, type elem) {                    \
     if (vec->size >=  vec->capacity) {                                    \
       if (vec->capacity == 0) {                                           \
@@ -52,15 +52,15 @@
     vec->data[vec->size++] = elem;                                        \
   }
 
-#define DEFINE_VEC_FREE(name, type)         \
+#define DEFINE_VEC_FREE(type, name)         \
   void name##_vec_free(name##_vec_t *vec) { \
     free(vec->data);                        \
   }
 
-#define DEFINE_VEC(name, type) \
-  DEFINE_VEC_NEW(name, type)   \
-  DEFINE_VEC_PUSH(name, type)  \
-  DEFINE_VEC_FREE(name, type)
+#define DEFINE_VEC2(type, name) \
+  DEFINE_VEC_NEW(type, name)    \
+  DEFINE_VEC_PUSH(type, name)   \
+  DEFINE_VEC_FREE(type, name)
 
 #define VEC_FOREACH(type, elem, vec) \
   int __i = 0;                       \
@@ -68,11 +68,17 @@
        __i < vec->size;              \
        __i++, elem = vec->data[__i])
 
-#define DEFINE_VEC3(name, type, destructor) \
-  DEFINE_VEC_NEW(name, type)                \
-  DEFINE_VEC_PUSH(name, type)               \
+#define VEC_FOREACH_PTR(type, elem, vec) \
+  int __i = 0;                           \
+  for (type *elem = &vec->data[0];       \
+       __i < vec->size;                  \
+       __i++, elem = &vec->data[__i])
+
+#define DEFINE_VEC3(type, name, destructor) \
+  DEFINE_VEC_NEW(type, name)                \
+  DEFINE_VEC_PUSH(type, name)               \
   void name##_vec_free(name##_vec_t *vec) { \
-    VEC_FOREACH(type, elem, vec) {          \
+    VEC_FOREACH_PTR(type, elem, vec) {      \
       destructor(elem);                     \
     }                                       \
     free(vec->data);                        \
