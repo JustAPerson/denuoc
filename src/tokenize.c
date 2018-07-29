@@ -130,7 +130,7 @@ token_vec_t dcc_tokenize(const char *input) {
         char *end2;
         token_tag_t tag = TOKEN_REAL;
         token_val_t val = { 0 };
-        if (sscanf(input, "%llu", &integer) && (strtoul(input, &end2, 10), end2 == end)) {
+        if (sscanf(input, "%lli", &integer) && (strtoul(input, &end2, 0), end2 >= end)) {
           tag = TOKEN_INTEGER;
           val.integer = integer;
         } else {
@@ -139,15 +139,11 @@ token_vec_t dcc_tokenize(const char *input) {
 
         token_t token = {input, end, tag, val };
         token_vec_push(&tokens, token);
-      } else if (sscanf(input, "%lli", &integer)) {
-        uint64_t confirm = strtoull(input, &end, 0);
-        dcc_assert(integer == confirm);
-
-        token_t token = {input, end, TOKEN_INTEGER, { .integer = integer } };
-        token_vec_push(&tokens, token);
       } else {
         dcc_ice("malformed number %.*s\n", malformed_token_end(input + 1) - input, input);
+        // TODO is this even necessary
       }
+      // TODO numeric suffixes
       input = end;
     } else {
       dcc_ice("untokenizable character `%c`\n", c);
