@@ -32,7 +32,7 @@ static void free_token(token_t *token) {
     free(token->val.string);
   }
 }
-DEFINE_VEC3(token_t, token, free_token);
+DEFINE_VEC3(token_t, token_vec, free_token);
 
 static bool starts_ident(char c) {
   return isalpha(c) || c == '_';
