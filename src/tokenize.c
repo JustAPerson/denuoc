@@ -28,8 +28,8 @@
 #include "tokenize.h"
 
 DEFINE_VEC_NEW(token, token)
-DEFINE_VEC_PUSH(token, token)
-DEFINE_VEC_FREE(token, token)
+DEFINE_VEC_PUSH(token, token_t)
+DEFINE_VEC_FREE(token, token_t)
 
 static bool starts_ident(char c) {
   return isalpha(c) || c == '_';
@@ -80,8 +80,8 @@ static bool issymb(char c) {
   return false;
 }
 
-token_vec dcc_tokenize(const char *input) {
-  token_vec tokens = token_vec_new();
+token_vec_t dcc_tokenize(const char *input) {
+  token_vec_t tokens = token_vec_new();
 
   for (char c = *input; c; c = *input) {
     if (isspace(c)) {
@@ -100,7 +100,7 @@ token_vec dcc_tokenize(const char *input) {
         val.string[end-begin] = 0;
       }
 
-      token token = { begin, end, tag, val };
+      token_t token = { begin, end, tag, val };
       token_vec_push(&tokens, token);
     } else if (issymb(c)) {
       //  3 three len symbols
@@ -137,13 +137,13 @@ token_vec dcc_tokenize(const char *input) {
           val.real = floating;
         }
 
-        token token = {input, end, tag, val };
+        token_t token = {input, end, tag, val };
         token_vec_push(&tokens, token);
       } else if (sscanf(input, "%lli", &integer)) {
         uint64_t confirm = strtoull(input, &end, 0);
         dcc_assert(integer == confirm);
 
-        token token = {input, end, TOKEN_INTEGER, { .integer = integer } };
+        token_t token = {input, end, TOKEN_INTEGER, { .integer = integer } };
         token_vec_push(&tokens, token);
       } else {
         dcc_ice("malformed number %.*s\n", malformed_token_end(input + 1) - input, input);
@@ -157,9 +157,8 @@ token_vec dcc_tokenize(const char *input) {
   return tokens;
 }
 
-void dcc_log_tokens(const token_vec *tokens) {
-  for (int i = 0; i < tokens->size; i++) {
-    token token = tokens->data[i];
+void dcc_log_tokens(const token_vec_t *tokens) {
+  VEC_FOREACH(token_t, token, tokens) {
     char buffer[32];
     char *extra = "<null>";
 

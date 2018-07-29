@@ -52,9 +52,9 @@ typedef struct {
   const char *begin, *end;
   token_tag_t tag;
   token_val_t val;
-} token;
-DECLARE_VEC(token, token)
+} token_t;
+DECLARE_VEC(token, token_t)
 
-token_vec dcc_tokenize(const char *input);
-void dcc_log_tokens(const token_vec *tokens);
+token_vec_t dcc_tokenize(const char *input);
+void dcc_log_tokens(const token_vec_t *tokens);
 char* dcc_token_tag_str(token_tag_t tag);

@@ -51,7 +51,7 @@ static char* read_stdin() {
 
 int main(int argc, char *argv[]) {
   char *input = read_stdin();
-  token_vec tokens = dcc_tokenize(input);
+  token_vec_t tokens = dcc_tokenize(input);
   dcc_log_tokens(&tokens);
 
   return 0;
