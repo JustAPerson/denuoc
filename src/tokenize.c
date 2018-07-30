@@ -103,7 +103,7 @@ token_vec_t dcc_tokenize(const char *input) {
         val.string[end-begin] = 0;
       }
 
-      token_t token = { begin, end, tag, val };
+      token_t token = { tag, val, { begin, end } };
       token_vec_push(&tokens, token);
     } else if (issymb(c)) {
       //  3 three len symbols
@@ -140,7 +140,7 @@ token_vec_t dcc_tokenize(const char *input) {
           val.real = floating;
         }
 
-        token_t token = {input, end, tag, val };
+        token_t token = { tag, val, { input, end }};
         token_vec_push(&tokens, token);
       } else {
         dcc_ice("malformed number %.*s\n", malformed_token_end(input + 1) - input, input);
@@ -152,6 +152,9 @@ token_vec_t dcc_tokenize(const char *input) {
       dcc_ice("untokenizable character `%c`\n", c);
     }
   }
+
+  token_t token = { TOKEN_EOF, 0, { input, input }};
+  token_vec_push(&tokens, token);
 
   return tokens;
 }
@@ -170,7 +173,11 @@ void dcc_log_tokens(const token_vec_t *tokens) {
       snprintf(buffer, sizeof buffer, "%f", token.val.real);
       extra = buffer;
     }
-    dcc_log(LOG_TRACE, "%s \"%.*s\" extra=%s\n", dcc_token_tag_str(token.tag), (int)(token.end - token.begin), token.begin, extra);
+    dcc_log(LOG_TRACE, "%s \"%.*s\" extra=%s\n",
+            dcc_token_tag_str(token.tag),
+            (int)(token.span.end - token.span.begin),
+            token.span.begin,
+            extra);
   }
 }
 

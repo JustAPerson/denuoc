@@ -50,8 +50,12 @@ typedef union {
 
 typedef struct {
   const char *begin, *end;
+} token_span_t;
+
+typedef struct {
   token_tag_t tag;
   token_val_t val;
+  token_span_t span;
 } token_t;
 DECLARE_VEC(token_t, token_vec)
 
