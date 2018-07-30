@@ -1,5 +1,5 @@
 CC ?= clang
-CFLAGS += --std=c11 -g -O2
+CFLAGS += --std=c99 -g -O2
 
 all: dcc
 
