@@ -106,20 +106,66 @@ token_vec_t dcc_tokenize(const char *input) {
       token_t token = { tag, val, { begin, end } };
       token_vec_push(&tokens, token);
     } else if (issymb(c)) {
-      //  3 three len symbols
-      // 19 two len symbols
-      // 23 one len symbols
-      /* static char *C_SYMBOLS3[] = {"<<=", ">>=", "...", }; */
-      /* static char *C_SYMBOLS2[] = {"->", "++", "--", "<<", ">>", */
-      /*                              ">=", "<=", "==", "!=", "&&", */
-      /*                              "||", "*=", "/=", "%=", "+=", */
-      /*                              "-=", "&=", "^=", "|=", }; */
-      /* static char  C_SYMBOLS1[] = {'[', ']', '(', ')', '{', */
-      /*                              '}', '.', '&', '*', '+', */
-      /*                              '-', '~', '!', '/', '%', */
-      /*                              '<', '>', '^', '|', '?', */
-      /*                              ':', ';', '=', }; */
-      dcc_nyi("symbol lexing");
+      static char *C_SYMBOL1_STRS[] = {
+        "[", "]", "(", ")", "{",
+        "}", ".", "&", "*", "+",
+        "-", "~", "!", "/", "%",
+        "<", ">", "^", "|", "?",
+        ":", ";", "=", 0,
+      };
+      static char *C_SYMBOL2_STRS[] = {
+        "->", "++", "--", "<<", ">>",
+        ">=", "<=", "==", "!=", "&&",
+        "||", "*=", "/=", "%=", "+=",
+        "-=", "&=", "^=", "|=", 0,
+      };
+      static char *C_SYMBOL3_STRS[] = {
+        "<<=", ">>=", "...", 0,
+      };
+      static token_tag_t C_SYMBOL1_TAGS[] = {
+        TOKEN_LSQUARE, TOKEN_RSQUARE, TOKEN_LPAREN, TOKEN_RPAREN,
+        TOKEN_LCURLY, TOKEN_RCURLY, TOKEN_DOT, TOKEN_AMP, TOKEN_STAR,
+        TOKEN_PLUS, TOKEN_MINUS, TOKEN_SQUIGGLE, TOKEN_EXCLAIM, TOKEN_FORWARD,
+        TOKEN_PERCENT, TOKEN_LESS, TOKEN_MORE, TOKEN_CARET, TOKEN_PIPE,
+        TOKEN_QUEST, TOKEN_COLON, TOKEN_SEMI, TOKEN_EQUAL,
+      };
+      static token_tag_t C_SYMBOL2_TAGS[] = {
+        TOKEN_ARROW, TOKEN_INCREMENT, TOKEN_DECREMENT, TOKEN_LEFT,
+        TOKEN_RIGHT, TOKEN_MOREEQ, TOKEN_LESSEQ, TOKEN_EQEQ, TOKEN_NOTEQ,
+        TOKEN_AMPAMP, TOKEN_PIPEPIPE, TOKEN_STAREQ, TOKEN_FORWARDEQ,
+        TOKEN_PERCENTEQ, TOKEN_PLUSEQ, TOKEN_MINUSEQ, TOKEN_AMPEQ,
+        TOKEN_CARETEQ, TOKEN_PIPEEQ,
+      };
+      static token_tag_t C_SYMBOL3_TAGS[] = {
+        TOKEN_LEFTEQ, TOKEN_RIGHTEQ, TOKEN_ELLIPSE,
+      };
+
+      static char **C_SYMBOLS[] = {
+        C_SYMBOL1_STRS,
+        C_SYMBOL2_STRS,
+        C_SYMBOL3_STRS,
+      };
+      static token_tag_t *C_SYMBOL_TAGS[] = {
+        C_SYMBOL1_TAGS,
+        C_SYMBOL2_TAGS,
+        C_SYMBOL3_TAGS,
+      };
+
+      for (int l = 3; l > 0; l--) {
+        char **symbols = C_SYMBOLS[l-1];
+        for (int i = 0; symbols[i]; i++) {
+          if (strncmp(input, symbols[i], l) == 0) {
+            token_tag_t tag = C_SYMBOL_TAGS[l-1][i];
+            token_t token = { tag, 0, { input, input + l}};
+            token_vec_push(&tokens, token);
+
+            input += l;
+            goto matched;
+          }
+        }
+      }
+    matched:
+      ;
     } else if (isdigit(c)) {
       uint64_t integer;
       double floating;
@@ -190,10 +236,55 @@ char* dcc_token_tag_str(token_tag_t tag) {
     "TOKEN_INTEGER",
     "TOKEN_REAL",
     "TOKEN_KEYWORD_VOID",
+    "TOKEN_LSQUARE",
+    "TOKEN_RSQUARE",
+    "TOKEN_LPAREN",
+    "TOKEN_RPAREN",
+    "TOKEN_LCURLY",
+    "TOKEN_RCURLY",
+    "TOKEN_DOT",
+    "TOKEN_AMP",
+    "TOKEN_STAR",
+    "TOKEN_PLUS",
+    "TOKEN_MINUS",
+    "TOKEN_SQUIGGLE",
+    "TOKEN_EXCLAIM",
+    "TOKEN_FORWARD",
+    "TOKEN_PERCENT",
+    "TOKEN_LESS",
+    "TOKEN_MORE",
+    "TOKEN_CARET",
+    "TOKEN_PIPE",
+    "TOKEN_QUEST",
+    "TOKEN_COLON",
+    "TOKEN_SEMI",
+    "TOKEN_EQUAL",
+    "TOKEN_ARROW",
+    "TOKEN_INCREMENT",
+    "TOKEN_DECREMENT",
+    "TOKEN_LEFT",
+    "TOKEN_RIGHT",
+    "TOKEN_MOREEQ",
+    "TOKEN_LESSEQ",
+    "TOKEN_EQEQ",
+    "TOKEN_NOTEQ",
+    "TOKEN_AMPAMP",
+    "TOKEN_PIPEPIPE",
+    "TOKEN_STAREQ",
+    "TOKEN_FORWARDEQ",
+    "TOKEN_PERCENTEQ",
+    "TOKEN_PLUSEQ",
+    "TOKEN_MINUSEQ",
+    "TOKEN_AMPEQ",
+    "TOKEN_CARETEQ",
+    "TOKEN_PIPEEQ",
+    "TOKEN_LEFTEQ",
+    "TOKEN_RIGHTEQ",
+    "TOKEN_ELLIPSE",
   };
 
   if (tag >= sizeof(STRINGS_OF_TOKENS) / sizeof(char*) ) {
-    dcc_ice("invalid tag");
+    dcc_ice("invalid tag %d\n", tag);
   }
   return STRINGS_OF_TOKENS[tag];
 }
