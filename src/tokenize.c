@@ -111,7 +111,7 @@ token_vec_t dcc_tokenize(const char *input) {
         "}", ".", "&", "*", "+",
         "-", "~", "!", "/", "%",
         "<", ">", "^", "|", "?",
-        ":", ";", "=", 0,
+        ":", ";", "=", ",", 0,
       };
       static char *C_SYMBOL2_STRS[] = {
         "->", "++", "--", "<<", ">>",
@@ -127,7 +127,7 @@ token_vec_t dcc_tokenize(const char *input) {
         TOKEN_LCURLY, TOKEN_RCURLY, TOKEN_DOT, TOKEN_AMP, TOKEN_STAR,
         TOKEN_PLUS, TOKEN_MINUS, TOKEN_SQUIGGLE, TOKEN_EXCLAIM, TOKEN_FORWARD,
         TOKEN_PERCENT, TOKEN_LESS, TOKEN_MORE, TOKEN_CARET, TOKEN_PIPE,
-        TOKEN_QUEST, TOKEN_COLON, TOKEN_SEMI, TOKEN_EQUAL,
+        TOKEN_QUEST, TOKEN_COLON, TOKEN_SEMI, TOKEN_EQUAL, TOKEN_COMMA,
       };
       static token_tag_t C_SYMBOL2_TAGS[] = {
         TOKEN_ARROW, TOKEN_INCREMENT, TOKEN_DECREMENT, TOKEN_LEFT,
@@ -259,6 +259,7 @@ char* dcc_token_tag_str(token_tag_t tag) {
     "TOKEN_COLON",
     "TOKEN_SEMI",
     "TOKEN_EQUAL",
+    "TOKEN_COMMA",
     "TOKEN_ARROW",
     "TOKEN_INCREMENT",
     "TOKEN_DECREMENT",
