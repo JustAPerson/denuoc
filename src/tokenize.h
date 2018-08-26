@@ -37,7 +37,7 @@ typedef enum {
   TOKEN_IDENT,
   TOKEN_STRING,
   TOKEN_INTEGER,
-  TOKEN_REAL,
+  TOKEN_FLOATING,
   TOKEN_KEYWORD_VOID,
   TOKEN_LSQUARE,
   TOKEN_RSQUARE,
@@ -91,7 +91,7 @@ typedef enum {
 
 typedef union {
   uint64_t integer;
-  double real;
+  double floating;
   char *string;
 } token_val_t;
 

@@ -177,13 +177,13 @@ token_vec_t dcc_tokenize(const char *input) {
 
         // float may actually be decimal integer
         char *end2;
-        token_tag_t tag = TOKEN_REAL;
+        token_tag_t tag = TOKEN_FLOATING;
         token_val_t val = { 0 };
         if (sscanf(input, "%lli", &integer) && (strtoul(input, &end2, 0), end2 >= end)) {
           tag = TOKEN_INTEGER;
           val.integer = integer;
         } else {
-          val.real = floating;
+          val.floating = floating;
         }
 
         token_t token = { tag, val, { input, end }};
@@ -215,8 +215,8 @@ void dcc_log_tokens(const token_vec_t *tokens) {
     } else if (token.tag == TOKEN_INTEGER) {
       snprintf(buffer, sizeof buffer, "%llu", token.val.integer);
       extra = buffer;
-    } else if (token.tag == TOKEN_REAL) {
-      snprintf(buffer, sizeof buffer, "%f", token.val.real);
+    } else if (token.tag == TOKEN_FLOATING) {
+      snprintf(buffer, sizeof buffer, "%f", token.val.floating);
       extra = buffer;
     }
     dcc_log(LOG_TRACE, "%s \"%.*s\" extra=%s\n",
