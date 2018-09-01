@@ -43,6 +43,11 @@ typedef enum  {
 } log_level;
 void dcc_log(log_level level, const char* format, ...);
 
+#define TRACE(...) dcc_log(LOG_TRACE, __VA_ARGS__)
+#define DEBUG(...) dcc_log(LOG_DEBUG, __VA_ARGS__)
+#define ERROR(...) dcc_log(LOG_ERROR, __VA_ARGS__)
+#define FATAL(...) dcc_log(LOG_FATAL, __VA_ARGS__)
+
 #define dcc_assert(cond)                                                \
 if (!(cond)) {                                                          \
   dcc_ice("%s:%d: assertion failed (%s)\n", __FILE__, __LINE__, #cond); \
