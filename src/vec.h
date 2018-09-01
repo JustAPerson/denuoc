@@ -25,7 +25,7 @@
 #include "dcc.h"
 
 #define DECLARE_VEC(type, name)               \
-  typedef struct {                            \
+  typedef struct name {                       \
     type *data;                               \
     size_t size, capacity;                    \
   } name##_t;                                 \
@@ -58,8 +58,10 @@
 
 #define DEFINE_VEC_FREE(type, name, destructor) \
   void name##_free(name##_t *vec) {             \
-    VEC_FOREACH_PTR(type, elem, vec) {          \
-      destructor(elem);                         \
+    if (destructor) {                           \
+      VEC_FOREACH_PTR(type, elem, vec) {        \
+        (destructor)(elem);                     \
+      }                                         \
     }                                           \
     free(vec->data);                            \
   }
@@ -69,10 +71,10 @@
     return (vec->size > 0) ? &vec->data[vec->size - 1] : 0; \
   }
 
-#define DEFINE_VEC_POP(type, name)   \
-  type name##_pop(name##_t *vec) {   \
-    dcc_assert(vec->size > 0);       \
-    return vec->data[vec->size - 1]; \
+#define DEFINE_VEC_POP(type, name) \
+  type name##_pop(name##_t *vec) { \
+    dcc_assert(vec->size > 0);     \
+    return vec->data[--vec->size]; \
   }
 
 #define DEFINE_VEC3(type, name, destructor) \
@@ -82,18 +84,17 @@
   DEFINE_VEC_LAST(type, name)               \
   DEFINE_VEC_POP(type, name)
 
-inline void null_destructor(void* elem) {}
-#define DEFINE_VEC2(type, name) DEFINE_VEC3(type, name, null_destructor)
+#define DEFINE_VEC2(type, name) DEFINE_VEC3(type, name, (void(*)(type *))0)
 
 #define VEC_FOREACH(type, elem, vec) \
   int __i = 0;                       \
-  for (type elem = vec->data[0];     \
-       __i < vec->size;              \
-       __i++, elem = vec->data[__i])
+  for (type elem = (vec)->data[0];   \
+       __i < (vec)->size;            \
+       __i++, elem = (vec)->data[__i])
 
 #define VEC_FOREACH_PTR(type, elem, vec) \
   int __i = 0;                           \
-  for (type *elem = &vec->data[0];       \
-       __i < vec->size;                  \
-       __i++, elem = &vec->data[__i])
+  for (type *elem = &(vec)->data[0];     \
+       __i < (vec)->size;                \
+       __i++, elem = &(vec)->data[__i])
 
