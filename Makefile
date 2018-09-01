@@ -10,4 +10,4 @@ dcc: $(OBJS)
 	$(CC) -o $@ $^
 
 clean:
-	rm $(OBJS)
+	rm $(OBJS) ./dcc
