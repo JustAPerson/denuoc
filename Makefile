@@ -1,13 +1,21 @@
 CC ?= clang
-CFLAGS += --std=c99 -g -O2
+CFLAGS += --std=c99 -g -O2 -MMD
 
 all: dcc
 
 SRCS = $(wildcard src/*.c)
 OBJS = $(patsubst %.c,%.o,$(SRCS))
 
-dcc: $(OBJS)
-	$(CC) -o $@ $^
+DEPS = $(patsubst %.c,%.d,$(SRCS))
 
-clean:
-	rm $(OBJS) ./dcc
+dcc: $(OBJS)
+	$(CC) -o $@ $(filter %.o,$^)
+
+%.d: %.o;
+
+clean: .PHONY
+	rm -f $(OBJS) ./dcc
+
+-include $(DEPS)
+
+.PHONY:
