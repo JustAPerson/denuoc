@@ -24,6 +24,24 @@
 #define DECLARE_STRING_GETTER(name)                 \
   const char* name##_tag_str(enum name##_tag tag);
 
+
+struct decltor;
+struct exp;
+struct initilization;
+struct initilizer;
+struct struct_decltor;
+struct type_squal;
+typedef struct decltor decltor_t;
+typedef struct exp exp_t;
+typedef struct initialization initialization_t;
+typedef struct initializer initializer_t;
+typedef struct struct_decltor struct_decltor_t;
+typedef struct type_squal type_squal_t;
+DECLARE_VEC(exp_t*, exp_vec);
+DECLARE_VEC(initialization_t, initialization_vec);
+DECLARE_VEC(struct_decltor_t, struct_decltor_vec);
+
+
 typedef enum storage_spec_tag {
   AST_STORAGE_NONE = 0,
   AST_STORAGE_TYPEDEF = 1,
@@ -35,11 +53,6 @@ typedef enum storage_spec_tag {
 DECLARE_STRING_GETTER(storage_spec);
 
 // forward declarations
-struct struct_decltor;
-struct type_squal;
-typedef struct struct_decltor struct_decltor_t;
-typedef struct type_squal type_squal_t;
-DECLARE_VEC(struct_decltor_t, struct_decltor_vec);
 
 typedef struct {
   type_squal_t *squal;
@@ -48,11 +61,19 @@ typedef struct {
 DECLARE_VEC(struct_decl_t, struct_decl_vec);
 
 typedef struct {
-  token_t *ident;
+  token_t *ident; // nullable
   struct_decl_vec_t decls;
 } sunion_spec_t;
 
 typedef struct {
+  token_t *ident;
+  exp_t *exp;
+} enumtor_t;
+DECLARE_VEC(enumtor_t*, enumtor_vec);
+
+typedef struct {
+  token_t *ident; // nullable
+  enumtor_vec_t enumtors; // nullable
 } enum_spec_t;
 
 typedef struct {
@@ -74,13 +95,12 @@ typedef struct {
     AST_TYPE_TYPEDEF,
   } tag;
   union {
-    sunion_spec_t *sunion;
-    enum_spec_t *_enum;
+    sunion_spec_t *suspec;
+    enum_spec_t *espec;
+    token_t *ident;
   };
 } type_spec_t;
 DECLARE_STRING_GETTER(type_spec);
-
-
 
 typedef enum type_qual {
   TYPE_QUAL_NONE = 0,
@@ -107,14 +127,6 @@ typedef struct {
     type_qual_t type_qual;
     func_spec_t func_spec;
 } decl_spec_t;
-
-struct exp;
-typedef struct exp exp_t;
-DECLARE_VEC(struct exp*, exp_vec);
-
-struct decltor;
-typedef struct decltor decltor_t;
-
 
 typedef struct {
   decl_spec_t *specifiers;
@@ -174,12 +186,6 @@ typedef struct constant {
     
   };
 } constant_t;
-
-struct initilizer;
-struct initilization;
-typedef struct initializer initializer_t;
-typedef struct initialization initialization_t;
-DECLARE_VEC(initialization_t, initialization_vec);
 
 struct exp {
   enum exp_tag {
@@ -303,29 +309,73 @@ typedef struct {
 } decl_t;
 DECLARE_VEC(decl_t*, decl_vec);
 
-typedef struct {
-  /* enum s{ */
-  /* } tag; */
-  /* union {}; */
-} statement_t;
+struct stmt;
+typedef struct stmt stmt_t;
+
 typedef struct {
   enum block_item_tag {
     AST_STATEMENT,
     AST_DECLARATION,
   } tag;
   union {
-    statement_t *statement;
+    stmt_t *statement;
     decl_t *declaration;
   };
 } block_item_t;
-DECLARE_VEC(block_item_t, block_item_vec);
+DECLARE_VEC(block_item_t*, block_item_vec);
 DECLARE_STRING_GETTER(block_item);
+
+struct stmt {
+  enum {
+    STMT_CASE,
+    STMT_DEFAULT,
+    STMT_LABEL,
+    STMT_COMPOUND,
+    STMT_EXP,
+    STMT_IF,
+    STMT_SWITCH,
+    STMT_DO,
+    STMT_WHILE,
+    STMT_FOR,
+    STMT_GOTO,
+    STMT_CONTINUE,
+    STMT_BREAK,
+    STMT_RETURN,
+  } tag;
+  union {
+    /* exp_t *exp; */
+    struct {
+      exp_t *exp;
+      stmt_t *stmt;
+    } stmt_case;
+    struct {
+      token_t *ident;
+      stmt_t *stmt;
+    } stmt_label;
+    stmt_t *stmt;
+    block_item_vec_t stmt_compound;
+    exp_t *exp;
+    struct {
+      exp_t *exp;
+      stmt_t *primary, *secondary;
+    } stmt_select;
+    struct {
+      exp_t *exp;
+      stmt_t *stmt;
+    } stmt_whiledo;
+    struct {
+      exp_t *exp1, *exp2, *exp3;
+      stmt_t *stmt;
+    } stmt_for;
+    token_t *token;
+  };
+};
 
 typedef struct {
   decl_spec_t *specifiers;
   decltor_t *declarator;
   decl_vec_t *declarations;
-  block_item_vec_t *block_items;
+  stmt_t *compound;
 } func_def_t;
 
 typedef struct {

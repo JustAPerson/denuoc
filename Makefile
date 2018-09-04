@@ -1,5 +1,6 @@
 CC ?= clang
-CFLAGS += --std=c99 -g -O2 -MMD
+CWARNINGS := -Wall
+CFLAGS += --std=c99 -g -O2 -MMD $(CWARNINGS)
 
 all: dcc
 

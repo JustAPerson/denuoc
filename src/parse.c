@@ -25,7 +25,7 @@
 // TODO FIXME destructors
 DEFINE_VEC2(init_decltor_t*, init_decltor_vec);
 DEFINE_VEC2(decl_t*, decl_vec);
-DEFINE_VEC2(block_item_t, block_item_vec);
+DEFINE_VEC2(block_item_t*, block_item_vec);
 DEFINE_VEC3(external_decl_t*, external_decl_vec, free);
 DEFINE_VEC2(exp_t*, exp_vec);
 DEFINE_VEC2(struct_decl_t, struct_decl_vec);
@@ -35,6 +35,7 @@ DEFINE_VEC2(param_decl_t*, param_decl_vec);
 DEFINE_VEC2(type_qual_t, type_qual_vec);
 DEFINE_VEC2(designator_t*, designator_vec);
 DEFINE_VEC2(initialization_t, initialization_vec);
+DEFINE_VEC2(enumtor_t*, enumtor_vec);
 
 typedef struct {
   enum token_tag token;
@@ -108,7 +109,7 @@ static token_t* stream_expect(stream_t *stream, token_tag_t tag) {
 
 // Print consistent error message
 static void stream_expected(stream_t *stream, char* phrase) {
-  dcc_ice("expected token `%s` found `%s`\n",
+  dcc_ice("expected %s found `%s`\n",
           phrase,
           dcc_token_tag_str(stream_peek(stream)->tag));
 }
@@ -116,6 +117,12 @@ static void stream_expected(stream_t *stream, char* phrase) {
 // Query
 static bool stream_is(stream_t *stream, token_tag_t tag) {
   return stream_peek(stream)->tag == tag;
+}
+
+static void stream_assert(stream_t *stream, bool cond, char *phrase) {
+  if (!cond) {
+    stream_expected(stream, phrase);
+  }
 }
 
 #define STREAM_ACTION(result, ...)                   \
@@ -625,7 +632,7 @@ static init_decltor_t* parse_init_decltor(stream_t *stream) {
     return 0;
   }
 
-  initializer_t *initializer;
+  initializer_t *initializer = 0;
   if (stream_is(stream, TOKEN_EQUAL)) {
     stream_next(stream);
 
@@ -895,6 +902,55 @@ static sunion_spec_t* parse_sunion_spec(stream_t *stream) {
   return output;
 }
 
+static enum_spec_t* parse_enum_spec(stream_t *stream) {
+  STREAM_PUSH();
+
+  if (!stream_is(stream, TOKEN_KEYWORD_ENUM)) {
+    STREAM_POP();
+    return 0;
+  }
+
+  stream_next(stream);
+  enum_spec_t *output = dcc_malloc(sizeof *output);
+  output->ident = 0;
+  output->enumtors = enumtor_vec_new();
+
+  if (stream_is(stream, TOKEN_IDENT)) {
+    output->ident = stream_peek(stream);
+    stream_next(stream);
+  }
+
+  if (stream_is(stream, TOKEN_LCURLY)) {
+    stream_next(stream);
+
+    while (!stream_is(stream, TOKEN_RCURLY)) {
+      if (output->enumtors.size > 0) {
+        stream_expect(stream, TOKEN_COMMA);
+      }
+
+      enumtor_t *enumtor = dcc_malloc(sizeof *enumtor);
+      enumtor->ident = stream_peek(stream);
+      stream_expect(stream, TOKEN_IDENT);
+
+      if (stream_is(stream, TOKEN_EQUAL)) {
+        stream_next(stream);
+        enumtor->exp = parse_exp(stream);
+        if (!enumtor->exp) {
+          stream_expected(stream, "constant expression after `=`");
+        }
+      }
+      if (stream_is(stream, TOKEN_COMMA)) {
+        stream_next(stream);
+      }
+      enumtor_vec_push(&output->enumtors, enumtor);
+    }
+    stream_expect(stream, TOKEN_RCURLY);
+  }
+
+  STREAM_COMMIT();
+  return output;
+}
+
 static type_spec_t* parse_type_spec(stream_t *stream) {
   static struct pair {
     token_tag_t token;
@@ -913,16 +969,47 @@ static type_spec_t* parse_type_spec(stream_t *stream) {
     { 0, 0 }
   };
 
+  STREAM_PUSH();
+
   token_tag_t tag = stream_peek(stream)->tag;
   for (struct pair *pair = PAIRS; pair->token; ++pair) {
     if (pair->token == tag) {
       type_spec_t *output = dcc_malloc(sizeof *output);
       stream_next(stream);
       output->tag = pair->type;
+      STREAM_COMMIT();
       return output;
     }
   }
 
+  sunion_spec_t *suspec = parse_sunion_spec(stream);
+  if (suspec) {
+    type_spec_t *output = dcc_malloc(sizeof *output);
+    output->tag = AST_TYPE_STRUCT;
+    output->suspec = suspec;
+    STREAM_COMMIT();
+    return output;
+  }
+
+  enum_spec_t *espec = parse_enum_spec(stream);
+  if (espec) {
+    type_spec_t *output = dcc_malloc(sizeof *output);
+    output->tag = AST_TYPE_ENUM;
+    output->espec = espec;
+    STREAM_COMMIT();
+    return output;
+  }
+
+  if (stream_is(stream, TOKEN_IDENT)) {
+    type_spec_t *output = dcc_malloc(sizeof *output);
+    output->tag = AST_TYPE_TYPEDEF;
+    output->ident = stream_peek(stream);
+    stream_next(stream);
+    STREAM_COMMIT();
+    return output;
+  }
+
+  STREAM_POP();
   return 0;
 }
 
@@ -1021,7 +1108,7 @@ static param_type_list_t* parse_param_type_list(stream_t *stream) {
     return 0;
   }
 
-  bool is_vararg;
+  bool is_vararg = false;
   param_decl_vec_t decls = param_decl_vec_new();
   param_decl_vec_push(&decls, pdecl);
 
@@ -1070,6 +1157,7 @@ static decltor_t* parse_decltor(stream_t *stream) {
   token_t *token = stream_peek(stream);
   token_tag_t tag = token->tag;
   if (!(tag == TOKEN_IDENT || tag == TOKEN_LPAREN)) {
+    // do not proceed if not followed by direct-decltor possible tokens
     type_qual_vec_free(&pointers);
     STREAM_POP();
     return 0;
@@ -1081,7 +1169,7 @@ static decltor_t* parse_decltor(stream_t *stream) {
   if (tag == TOKEN_IDENT) {
     direct.tag = AST_DECLTOR_IDENT;
     direct.ident = token;
-  } else if (tag == TOKEN_LPAREN) {
+  } else { // TOKEN_LPAREN, see ifstatement above
     direct.tag = AST_DECLTOR_NESTED;
     direct.nested = parse_abstract_decltor(stream);
     if (!direct.nested) {
@@ -1095,7 +1183,6 @@ static decltor_t* parse_decltor(stream_t *stream) {
     if (stream_is(stream, TOKEN_LPAREN)) {
       stream_next(stream);
 
-      token_vec_t *idents;
       param_type_list_t *params = parse_param_type_list(stream);
       if (params) {
         direct.tag = AST_DECLTOR_FUNC_TYPES;
@@ -1400,32 +1487,297 @@ static initializer_t* parse_initializer(stream_t *stream) {
 // stdspec.6.8 Statements and blocks
 ////////////////////////////////////////////////////////////////////////////////
 
-static block_item_vec_t* parse_compound_statement(stream_t *stream);
-static statement_t* parse_statement(stream_t *stream) {
-  return 0;
+static stmt_t* parse_statement(stream_t *stream);
+
+static stmt_t* parse_label(stream_t *stream) {
+  STREAM_PUSH();
+
+  stmt_t *output = 0;
+  if (stream_is(stream, TOKEN_KEYWORD_CASE)) {
+    stream_next(stream);
+
+    output = dcc_malloc(sizeof *output);
+    output->tag = STMT_CASE;
+
+    output->stmt_case.exp = parse_exp(stream);
+    stream_assert(stream, output->stmt_case.exp, "constant expression after `case`");
+
+    stream_expect(stream, TOKEN_COLON);
+
+    output->stmt_case.stmt = parse_statement(stream);
+    stream_assert(stream, output->stmt_case.stmt, "statement after `:`");
+
+  } else if (stream_is(stream, TOKEN_KEYWORD_DEFAULT)) {
+    stream_next(stream);
+    stream_expect(stream, TOKEN_COLON);
+
+    output = dcc_malloc(sizeof *output);
+    output->tag = STMT_DEFAULT;
+    output->stmt = parse_statement(stream);
+    stream_assert(stream, output->stmt, "statement after `:`");
+  } else if (stream_is(stream, TOKEN_IDENT)) {
+    stream_next(stream);
+
+    if (stream_is(stream, TOKEN_COLON)) {
+      output = dcc_malloc(sizeof *output);
+      output->tag = STMT_LABEL;
+      output->stmt_label.ident = stream_peek(stream);
+      stream_next(stream);
+
+      output->stmt_label.stmt = parse_statement(stream);
+      stream_assert(stream, output->stmt_label.stmt, "statement after `:`");
+    }
+  }
+
+  if (output) {
+    STREAM_COMMIT();
+    return output;
+  } else {
+    STREAM_POP();
+    return 0;
+  }
 }
+
+static stmt_t *parse_statement(stream_t *stream);
 static block_item_t* parse_block_item(stream_t *stream) {
+  STREAM_PUSH();
+
+  decl_t *decl = parse_decl(stream);
+  if (decl) {
+    block_item_t *output = dcc_malloc(sizeof *output);
+    output->tag = AST_STATEMENT;
+    output->declaration = decl;
+    STREAM_COMMIT();
+    return output;
+  }
+
+  stmt_t *statement = parse_statement(stream);
+  if (statement) {
+    block_item_t *output = dcc_malloc(sizeof *output);
+    output->tag = AST_STATEMENT;
+    output->statement = statement;
+    STREAM_COMMIT();
+    return output;
+  }
+
+  STREAM_POP();
   return 0;
 }
-static block_item_vec_t* parse_compound_statement(stream_t *stream) {
+
+static stmt_t* parse_compound_statement(stream_t *stream) {
+  STREAM_PUSH();
   if (!stream_is(stream, TOKEN_LCURLY)) {
+    STREAM_POP();
     return 0;
   }
   stream_next(stream); // consume LCURLY
-  block_item_vec_t *items = dcc_malloc(sizeof(block_item_vec_t));
-  *items = block_item_vec_new();
+
+  stmt_t *output = dcc_malloc(sizeof *output);
+  output->tag = STMT_COMPOUND;
+  output->stmt_compound = block_item_vec_new();
   while (true) {
     block_item_t* item = parse_block_item(stream);
     if (!item) {
       break;
     }
-    block_item_vec_push(items, *item);
+    block_item_vec_push(&output->stmt_compound, item);
   }
   stream_expect(stream, TOKEN_RCURLY); // consume RCURLY
-  /* dcc_log(LOG_TRACE, "parsed compound_statement (%d items)\n", items->size); */
-  return items;
+  STREAM_COMMIT();
+  return output;
 }
 
+static stmt_t *parse_exp_statement (stream_t *stream) {
+  STREAM_PUSH();
+
+  exp_t *exp = parse_exp(stream);
+  if (exp) {
+    stmt_t *output = dcc_malloc(sizeof *output);
+    output->tag = STMT_EXP;
+    output->exp = exp;
+    STREAM_COMMIT();
+    return output;
+  }
+
+  STREAM_POP();
+  return 0;
+}
+
+
+static stmt_t* parse_selection(stream_t *stream) {
+  STREAM_PUSH();
+
+  token_tag_t tag = stream_peek(stream)->tag;
+  if (!(tag == TOKEN_KEYWORD_IF || tag == TOKEN_KEYWORD_SWITCH)) {
+    STREAM_POP();
+    return 0;
+  }
+  stream_next(stream);
+
+  stream_next(stream);
+  stream_expect(stream, TOKEN_LPAREN);
+
+  exp_t *exp = parse_exp(stream);
+  stream_assert(stream, exp, "expression after `(`");
+  stream_expect(stream, TOKEN_RPAREN);
+
+  stmt_t *primary, *secondary = 0;
+  primary = parse_statement(stream);
+  stream_assert(stream, primary, "statement after `)`");
+
+  stmt_t *output = dcc_malloc(sizeof *output);
+  if (tag == TOKEN_KEYWORD_IF) {
+    if (stream_is(stream, TOKEN_KEYWORD_ELSE)) {
+      secondary = parse_statement(stream);
+      stream_assert(stream, secondary, "statement after `)`");
+    }
+    output->tag = STMT_IF;
+  } else if (tag == TOKEN_KEYWORD_SWITCH) {
+    output->tag = STMT_SWITCH;
+  }
+
+  output->stmt_select.exp = exp;
+  output->stmt_select.primary = primary;
+  output->stmt_select.primary = secondary;
+
+  STREAM_COMMIT();
+  return output;
+}
+
+
+static stmt_t* parse_iteration(stream_t *stream) {
+  STREAM_PUSH();
+
+  token_tag_t tag = stream_peek(stream)->tag;
+  if (!(tag == TOKEN_KEYWORD_WHILE
+        || tag == TOKEN_KEYWORD_DO
+        || tag == TOKEN_KEYWORD_FOR)) {
+    STREAM_POP();
+    return 0;
+  }
+  stream_next(stream);
+
+  exp_t *exp, *exp2, *exp3;
+  stmt_t *stmt;
+
+  stmt_t *output = dcc_malloc(sizeof *output);
+  if (tag == TOKEN_KEYWORD_DO) {
+    stmt = parse_statement(stream);
+    stream_assert(stream, stmt, "statement after `do`");
+
+    stream_expect(stream, TOKEN_KEYWORD_WHILE);
+    stream_expect(stream, TOKEN_LPAREN);
+    exp = parse_exp(stream);
+    stream_assert(stream, exp, "expression after `(`");
+    stream_expect(stream, TOKEN_RPAREN);
+
+    stream_expect(stream, TOKEN_SEMI);
+
+    output->tag = STMT_DO;
+    output->stmt_whiledo.exp = exp;
+    output->stmt_whiledo.stmt = stmt;
+  } else if (tag == TOKEN_KEYWORD_WHILE) {
+    stream_expect(stream, TOKEN_LPAREN);
+    exp = parse_exp(stream);
+    stream_assert(stream, exp, "expression after `(`");
+    stream_expect(stream, TOKEN_RPAREN);
+
+    stmt = parse_statement(stream);
+    stream_assert(stream, stmt, "statement after `do`");
+
+    output->tag = STMT_WHILE;
+    output->stmt_whiledo.exp = exp;
+    output->stmt_whiledo.stmt = stmt;
+  } else if (tag == TOKEN_KEYWORD_FOR) {
+    stream_expect(stream, TOKEN_LPAREN);
+    exp = parse_exp(stream);
+    stream_expect(stream, TOKEN_SEMI);
+
+    exp2 = parse_exp(stream);
+    stream_expect(stream, TOKEN_SEMI);
+
+    exp3 = parse_exp(stream);
+    stream_expect(stream, TOKEN_SEMI);
+    stream_expect(stream, TOKEN_RPAREN);
+
+    stmt = parse_statement(stream);
+
+    output->tag = STMT_FOR;
+    output->stmt_for.exp1 = exp;
+    output->stmt_for.exp2 = exp2;
+    output->stmt_for.exp3 = exp3;
+    output->stmt_whiledo.stmt = stmt;
+  }
+
+  STREAM_COMMIT();
+  return output;
+}
+
+static stmt_t* parse_jump(stream_t *stream) {
+  STREAM_PUSH();
+
+  stmt_t *output = dcc_malloc(sizeof *output);
+
+  if (stream_is(stream, TOKEN_KEYWORD_GOTO)) {
+    stream_next(stream);
+
+    token_t *tok = stream_peek(stream);
+    stream_expect(stream, TOKEN_IDENT);
+    stream_expect(stream, TOKEN_SEMI);
+
+    output->tag = STMT_GOTO;
+    output->token = tok;
+  } else if (stream_is(stream, TOKEN_KEYWORD_CONTINUE)) {
+    stream_next(stream);
+    stream_expect(stream, TOKEN_SEMI);
+
+    stmt_t *output = dcc_malloc(sizeof *output);
+    output->tag = STMT_CONTINUE;
+  } else if (stream_is(stream, TOKEN_KEYWORD_BREAK)) {
+    stream_next(stream);
+    stream_expect(stream, TOKEN_SEMI);
+
+    output->tag = STMT_BREAK;
+  } else if (stream_is(stream, TOKEN_KEYWORD_RETURN)) {
+    stream_next(stream);
+
+    output->tag = STMT_RETURN;
+    output->exp = parse_exp(stream); // can be null
+    stream_expect(stream, TOKEN_SEMI);
+  } else {
+    free(output);
+    STREAM_POP();
+    return 0;
+  }
+
+  STREAM_COMMIT();
+  return output;
+}
+
+typedef stmt_t* (*stmt_func_t)(stream_t *stream);
+
+static stmt_t* parse_statement(stream_t *stream) {
+  stmt_func_t STATEMENTS[] = {
+    parse_label,
+    parse_compound_statement,
+    parse_exp_statement,
+    parse_selection,
+    parse_iteration,
+    parse_jump,
+    0,
+  };
+
+  STREAM_PUSH();
+  for (stmt_func_t* func = STATEMENTS; *func; ++func) {
+    stmt_t *output = (*func)(stream);
+    if (output) {
+      STREAM_COMMIT();
+      return output;
+    }
+  }
+  STREAM_POP();
+  return 0;
+}
 static func_def_t* parse_func_def(stream_t *stream) {
   STREAM_PUSH();
 
@@ -1447,15 +1799,15 @@ static func_def_t* parse_func_def(stream_t *stream) {
     goto error;
   }
   // TODO Why can we only now commit to func_def
-  block_item_vec_t *block_items = parse_compound_statement(stream);
-  if (!block_items) {
+  stmt_t *compound = parse_compound_statement(stream);
+  if (!compound) {
     goto error;
   }
 
   func_def_t *output = dcc_malloc(sizeof(func_def_t));
   output->specifiers = specs;
   output->declarator = decltor;
-  output->block_items = block_items;
+  output->compound = compound;
 
   STREAM_COMMIT();
   return output;

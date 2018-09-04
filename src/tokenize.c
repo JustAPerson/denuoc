@@ -187,7 +187,7 @@ token_vec_t dcc_tokenize(const char *input) {
         for (int i = 0; symbols[i]; i++) {
           if (strncmp(input, symbols[i], l) == 0) {
             token_tag_t tag = C_SYMBOL_TAGS[l-1][i];
-            token_t token = { tag, 0, { input, input + l}};
+            token_t token = { tag, { 0 }, { input, input + l}};
             token_vec_push(&tokens, token);
 
             input += l;
@@ -201,7 +201,7 @@ token_vec_t dcc_tokenize(const char *input) {
       uint64_t integer;
       double floating;
 
-      char *end;
+      char *end = 0;
       if (sscanf(input, "%lf", &floating)) {
         double confirm = strtod(input, &end);
         dcc_assert(floating == confirm);
@@ -230,7 +230,7 @@ token_vec_t dcc_tokenize(const char *input) {
     }
   }
 
-  token_t token = { TOKEN_EOF, 0, { input, input }};
+  token_t token = { TOKEN_EOF, { 0 }, { input, input }};
   token_vec_push(&tokens, token);
 
   return tokens;
